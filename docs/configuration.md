@@ -15,6 +15,10 @@ All unknown keys are errors. Paths resolve relative to the configuration file. J
 | `crop` | whole source frame | `[left,top,right,bottom]` original-frame integer pixel bounds; positive area, inside every affected source frame; right/bottom exclusive |
 | `canvas` | `[256,256]` | Positive integer width/height <=8192, product <=16,777,216 |
 | `trim` | `true` | After explicit crop, further crop each frame to all nonzero alpha before transforming |
+| `resample` | `"lanczos"` | `lanczos` for smooth artwork, `nearest` for pixel art; applied to normalization |
+| `analysis` | `{}` | Optional object; unknown analysis keys are errors |
+| `analysis.enabled` | `true` | Emit motion diagnostics and a proposed timing-preserving config patch; false skips analysis |
+| `analysis.duplicate_threshold` | `0.01` | Normalized visual distance 0..0.2; zero requires identical visible pixels, larger values propose more approximate removals |
 | `anchor` | `"bottom-center"` | Source-relative fraction after optional crop; names `center`, `top-left` or `[x,y]` in 0..1 |
 | `source_anchor` | absent | Original single-frame pixel coordinate `[x,y]`, each 0..16384; overrides `anchor` and accounts for crop offset |
 | `target_anchor` | `"bottom-center"` | Canvas fraction/name using same syntax as `anchor` |
@@ -37,7 +41,7 @@ Explicit crop runs before alpha trim, shared fit and placement. `source_anchor` 
 
 The HTML comparison embeds original, unmodified source PNGs alongside processed output. Both panels follow the same sequence index, duration, playback state, background and zoom control. At 100% each image uses its own native pixel dimensions. No files or server are needed. The original panel shows a sheet cell for sheet inputs. With `loop:once`, playback holds the last frame after its duration and offers Replay; GIF omits its repeat extension and WebP uses a loop count of 1. `infinite` uses loop count 0 in both encoders.
 
-The shared fit is `min(canvas_width / max_frame_width, canvas_height / max_frame_height)` across **all imported nonempty frames**, after optional alpha cropping. It is unaffected by sequence selection, so selecting a subset does not change character size. Completely transparent frames are retained and flagged. Resampling uses Pillow Lanczos; integer raster dimensions introduce subpixel rounding differences. Anchors may place visible content outside the canvas; this is allowed and reported as clipping in QA.
+The shared fit is `min(canvas_width / max_frame_width, canvas_height / max_frame_height)` across **all imported nonempty frames**, after optional alpha cropping. It is unaffected by sequence selection, so selecting a subset does not change character size. Completely transparent frames are retained and flagged. Resampling defaults to Pillow Lanczos; nearest-neighbor is available for pixel art. Integer raster dimensions introduce subpixel rounding differences. Anchors may place visible content outside the canvas; this is allowed and reported as clipping in QA.
 
 For a 128×128 character with constant feet at (64,114), use `source_anchor:[64,114]`, `target_anchor:[0.5,0.9]` and `scale:0.8`. Cropped-bounds anchors alone cannot infer feet and may drift when an arm changes the bounding box. If feet move in the source, specify each source frame's measured anchor. `frames` keys refer to source indices before sequence reordering.
 
@@ -46,6 +50,26 @@ Directory import is nonrecursive, PNG extensions case-insensitive. Both director
 Numeric filename checks group paths by their text prefix/suffix around the last digit run (case-insensitive). Each group must be contiguous between its minimum and maximum ID unless `source.allow_gaps:true`; no zero/one starting index is required. Duplicate IDs such as `frame1.png` and `frame01.png` always fail. Unnumbered filenames remain valid. Sheet count is explicit and is not subject to filename checks.
 
 QA includes opaque source count and `loop_rgba_mae` / `loop_alpha_mae`: normalized 0..1 mean absolute channel differences between the final and first output frames. These describe the loop boundary, not motion smoothness or a pass/fail threshold; hidden RGB can affect the RGBA metric. Manifest bounds and placements provide per-frame geometric diagnostics.
+
+## Motion analysis and explicit adoption
+
+`loop_premultiplied_distance` adds a hidden-RGB-invariant boundary metric. It takes the larger of global premultiplied RGBA RMS and half an approximate local 8×8 energy maximum, normalized 0..1. Existing metrics remain available for compatibility.
+
+When enabled, `quality.json.analysis` contains:
+
+- `duplicates`: threshold, zero-based output `keep_positions`, merged `durations_ms`, removed positions with retained-position/distance evidence, total duration and `config_patch`.
+- `loop_candidates`: at most three inclusive output-position intervals (`start`, `end`), total duration, seam-to-typical-step ratio, change-centroid velocity change, velocity reliability, score and `good`/`review` heuristic rating. The UI calls `good` “Lower seam”; it is not a quality guarantee. Unavailable velocity evidence uses a conservative penalty of 2, with `velocity_reliable: false`.
+- `coverage`: input count, loop sample count, selected original output positions and `complete_loop_search`. All boundaries are considered up to 128 frames; longer timelines sample 128 boundaries uniformly. Intervals contain at least four original frames. Their actual immediate seam neighbors and all original adjacent steps are always examined, including unsampled frames. Static or exactly repeated seam endpoints do not establish a moving loop and are excluded.
+
+Consecutive near-duplicates are compared with the **last kept frame**, not every previous pose; later returns remain. Removed hold durations merge into that frame. Rendering and all encoded assets still follow the original timeline. With analysis disabled, `analysis` is null and no patch file is produced; the boundary metric remains available.
+
+`suggested-config.json` is a **fragment**, not a complete build file. Merge its `sequence` and `durations_ms` into a copy of the original configuration, saved beside the original so relative source paths resolve identically. Keep transforms, anchors, source, exports and other options. The patch maps output positions back to original source indices. Holds above 60000 ms split into repeated source indices with balanced legal durations; total time stays unchanged. GIF timing quantization still applies.
+
+Example: source sequence `[2,2,0]` at `[80,120,100]` ms proposes `[2,0]` at `[200,100]` ms. Approximate removal can erase an intentional blink or gesture; inspect every proposal before adopting it.
+
+The self-contained preview has a Motion review section with removal details, patch download, loop-range preview and Full sequence reset. Range selection affects only preview playback; selecting a candidate repeats it even when the original action is `once`. Returning to Full sequence restores the action's playback policy. To export a loop, explicitly select the candidate's source indices/durations from the original manifest into a new configuration and build into a new output directory. Loop and duplicate proposals are alternative edits of the original timeline; their position indices cannot be combined blindly after a deletion.
+
+Loop scores use 24×24 premultiplied features and timing-aware movement of pixels that differ from a temporal median background. This helps opaque backgrounds but is not optical flow or semantic motion analysis. Unreliable motion estimates require review. Uniformly scaling all durations leaves the normalized ranking unchanged; variable durations affect seam velocity. Small details, rotation, occlusion and multiple subjects may defeat this heuristic. See [research and method boundaries](spriteframe-research.md).
 
 Build validates before publishing, renders in a sibling temporary directory, then renames it into place. A failed build cleans the temporary directory. The destination must not exist or overlap the source directory/file. Do not run simultaneous builds targeting the same destination. Original assets are never changed.
 

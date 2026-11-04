@@ -62,6 +62,30 @@ class PipelineTests(unittest.TestCase):
         with Image.open(output / "frames/0001.png") as image:
             self.assertEqual(image.getbbox(), (18, 8, 28, 18))
 
+    def test_analysis_patch_uses_source_indices_and_preserves_long_holds(self):
+        manifest, output = self.build(sequence=[2, 2, 0], durations_ms=[60000, 10, 120], exports=["png"])
+        report = json.loads((output / "quality.json").read_text())
+        patch = report["analysis"]["duplicates"]["config_patch"]
+        self.assertEqual(patch["sequence"], [2, 2, 0])
+        self.assertEqual(sum(patch["durations_ms"]), 60130)
+        self.assertTrue(all(10 <= value <= 60000 for value in patch["durations_ms"]))
+        self.assertEqual(manifest["frame_count"], 3)
+        self.assertEqual(json.loads((output / "suggested-config.json").read_text()), patch)
+
+    def test_nearest_resampling_keeps_pixel_palette_and_analysis_can_be_disabled(self):
+        _, output = self.build(resample="nearest", analysis={"enabled": False})
+        report = json.loads((output / "quality.json").read_text())
+        self.assertIsNone(report["analysis"])
+        with Image.open(output / "frames/0000.png") as image:
+            self.assertEqual(set(image.getchannel("A").tobytes()), {0, 255})
+        self.assertFalse((output / "suggested-config.json").exists())
+
+    def test_invalid_analysis_and_resample_options_are_rejected(self):
+        for changes in [{"resample": "linear"}, {"analysis": True}, {"analysis": {"enabled": 1}},
+                        {"analysis": {"duplicate_threshold": -1}}, {"analysis": {"typo": True}}]:
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                self.build(**changes)
+
     def test_explicit_anchor_without_trim(self):
         _, output = self.build(trim=False, anchor=[0, 0], target_anchor=[0, 0], scale=0.5)
         with Image.open(output / "frames/0000.png") as image:

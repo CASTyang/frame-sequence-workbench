@@ -10,6 +10,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageStat
 
 from . import config as schema
+from .analysis import analyze, visual_distance
 from .exports import write
 from .inputs import read
 
@@ -69,7 +70,8 @@ def normalize(sources, config, sequence, durations):
         frame = Image.new("RGBA", (width, height))
         ink = None
         if not empty:
-            resized = image.resize(size, Image.Resampling.LANCZOS)
+            method = Image.Resampling.NEAREST if config["resample"] == "nearest" else Image.Resampling.LANCZOS
+            resized = image.resize(size, method)
             frame.paste(resized, (x, y))
             ink = resized.getchannel("A").getbbox()
         bbox = frame.getchannel("A").getbbox()
@@ -105,6 +107,7 @@ def normalize(sources, config, sequence, durations):
         "total_duration_ms": sum(durations),
         "fit_scale": fit,
         "exports": config["exports"],
+        "resample": config["resample"],
         "frames": records,
     }
     difference = ImageStat.Stat(ImageChops.difference(images[-1], images[0]))
@@ -124,6 +127,20 @@ def normalize(sources, config, sequence, durations):
             "QA detects empty alpha, opaque sources and geometric clipping; it does not assess anatomy or motion quality.",
         ],
     }
+    quality["metrics"]["loop_premultiplied_distance"] = visual_distance(images[-1], images[0])
+    quality["analysis"] = None
+    if config["analysis"]["enabled"]:
+        report = analyze(images, durations, config["analysis"]["duplicate_threshold"])
+        proposal = report["duplicates"]
+        patch_sequence, patch_durations = [], []
+        for position, duration in zip(proposal["keep_positions"], proposal["durations_ms"]):
+            # Split merged holds to retain the schema's 10..60000 ms range.
+            parts = math.ceil(duration / 60000)
+            base, remainder = divmod(duration, parts)
+            patch_sequence.extend([sequence[position]] * parts)
+            patch_durations.extend([base + (i < remainder) for i in range(parts)])
+        proposal["config_patch"] = {"sequence": patch_sequence, "durations_ms": patch_durations}
+        quality["analysis"] = report
     return images, manifest, quality
 
 

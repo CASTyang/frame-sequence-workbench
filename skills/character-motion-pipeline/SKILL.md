@@ -32,6 +32,8 @@ Make the output canvas large enough for the union of aligned poses. Do not shrin
 
 Set a portable `action_id`, playback order, frame durations and `loop` policy (`infinite` or `once`) explicitly. Optional `crop: [left, top, right, bottom]` applies before alpha trimming, globally or per frame; `source_anchor` remains in original-image coordinates. A reverse sequence is useful only when physically plausible. A repeated endpoint can create an unintended pause; a crossfade can create double limbs. Neither is an automatic loop repair.
 
+For pixel art choose `resample: "nearest"`; smooth artwork defaults to `lanczos`. Nearest-neighbor alone does not ensure an integer scale or repair an inconsistent pixel grid.
+
 ## Build and review
 
 ```sh
@@ -41,6 +43,12 @@ python -m frame_workbench build /path/to/motion.json --output /path/to/new-outpu
 The destination must be new. Do not delete an existing output to make a command pass; choose a versioned destination unless the user requested replacement.
 
 Open the generated `preview.html` and compare synchronized original/processed frames at native and intended display sizes on light, dark and checker backgrounds. Scrub every frame, then play multiple loops for looping actions; for one-shot actions, check the final hold and replay. Check feet, head size, raised hands, transparent edges and the last-to-first transition where applicable. Read `quality.json`; metrics are diagnostics, not a universal quality score.
+
+With tool version 0.2+, inspect **Motion review** and `quality.json.analysis`. Adjacent removal proposals compare the previous retained pose and merge hold times; a later return to the same pose stays in the timeline. Review the removed-frame list for blinks, settling and intentional pauses before adopting an approximate match. Set `analysis.duplicate_threshold: 0` for exact visible-pixel equality, or `analysis.enabled: false` to skip proposals. Transparent hidden RGB must not be interpreted as visible motion.
+
+Preview loop candidates separately, then reset to Full sequence for comparison. Candidate `start`/`end` are inclusive **output positions in the original build**, not source indices. A low score is not proof of physical continuity; inspect the seam at normal speed and frame by frame. Check `coverage` when more than 128 frames were sampled; unsearched boundaries can be better. An unavailable movement estimate or thumbnail detail loss is a reason to inspect, not to assert success.
+
+If removals are acceptable, merge only `sequence` and `durations_ms` from `suggested-config.json` into a copy of the original JSON **beside the original file**, preserving relative source resolution and transforms. The fragment already maps back to source indices and conserves total duration, including holds split to respect the 60000 ms frame limit. It is not a standalone build config. Rebuild into a new directory and compare duration/provenance against the first manifest. To export a loop instead, map its output positions through the first manifest's `source_index` and retain that interval's durations. Do not combine loop positions with a shortened timeline without remapping and reviewing again. Preview selection never applies an edit to existing exports.
 
 The build exports manifest/timing and normalized frames; request sprite sheet, WebP/GIF and editable OpenRaster according to the target. OpenRaster layers are complete poses, **not semantic body-part layers or a Live2D rig**. GIF has limited colors/transparency; PNG/WebP remain the alpha reference. Keep the JSON build configuration with the source material so edits are reproducible.
 
