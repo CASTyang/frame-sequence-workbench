@@ -71,8 +71,24 @@ MIT © 2026 CASTyang。示例角色由仓库内几何绘图脚本原创生成。
 
 仓库附带 [character-motion-pipeline](skills/character-motion-pipeline/SKILL.md)，帮助组织角色帧、锚点、动作与验收步骤。将整个 `skills/character-motion-pipeline` 文件夹复制到 `~/.codex/skills/`（Windows 为用户目录下的 `.codex/skills/`）。skill 不包含 Python 工具安装，仍需先按上面的命令安装本包。
 
+## 0.2：动作质检与保时长建议
+
+新增透明度感知的相邻去重建议、循环区间推荐，以及像素画 `resample: "nearest"`。预览的 **Motion review** 可查看拟移除帧、下载配置片段、反复播放候选循环并恢复完整序列。
+
+例如 `[A,A,B]` 的时长 `[80,120,100]ms` 会建议改为 `[A,B] + [200,100]ms`，保留总时长。建议写入 `quality.json` 与 `suggested-config.json`，原有导出仍按你的配置生成。先审核，再将片段合并到原配置的副本，在新目录重建。片段已使用来源索引，但不是完整配置文件。
+
+```sh
+frame-workbench build examples/analysis.json --output examples/output-analysis
+```
+
+上例复用快速开始生成的原创素材。精确视觉去重使用 `analysis: {"duplicate_threshold": 0}`；关闭分析使用 `analysis: {"enabled": false}`。循环评分只是辅助判断，不能保证无缝；超过 128 帧会抽样候选边界，但接缝始终检查真实相邻帧。
+
+查看[配置与审核步骤](docs/configuration.md#motion-analysis-and-explicit-adoption)、[SpriteFrame 原理研究及证据](docs/spriteframe-research.md)。本次研究使用了 rea 与浏览器合成素材测试；AI 后端模型未知，仓库未包含网站代码或素材。
+
 ## English
 
 An offline, reproducible PNG animation preparation CLI. Import a PNG directory, ZIP, or regular spritesheet; preserve alpha and aspect ratio; align original pixel anchors; edit frame order, timing, offsets and scales. Export PNG, sheet, lossless WebP, GIF, optional OpenRaster layers, a manifest, basic QA, and a self-contained interactive HTML preview.
+
+Version 0.2 adds duration-preserving adjacent-frame removal proposals, heuristic loop-range previews, an explicit config-patch download and nearest-neighbor scaling for pixel art. Suggestions never silently change exported assets. See [motion review](docs/configuration.md#motion-analysis-and-explicit-adoption) and the [public-site research](docs/spriteframe-research.md).
 
 Install with `python -m pip install .`, generate the original demo with `python examples/generate_demo.py`, then run `frame-workbench build examples/directory.json --output examples/output-directory`. Output directories must be new. Python 3.11+; Pillow is the only runtime dependency. See [configuration reference](docs/configuration.md) for the exact schema and limitations.

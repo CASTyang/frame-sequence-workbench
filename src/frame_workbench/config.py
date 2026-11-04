@@ -88,6 +88,8 @@ def load(path):
             "action_id",
             "loop",
             "crop",
+            "analysis",
+            "resample",
         },
         "config",
     )
@@ -122,6 +124,13 @@ def load(path):
     config.setdefault("trim", True)
     if not isinstance(config["trim"], bool):
         raise ValueError("trim must be boolean")
+    if config.setdefault("resample", "lanczos") not in ["lanczos", "nearest"]:
+        raise ValueError("resample must be lanczos or nearest")
+    analysis = config.setdefault("analysis", {})
+    keys(analysis, {"enabled", "duplicate_threshold"}, "analysis")
+    if not isinstance(analysis.setdefault("enabled", True), bool):
+        raise ValueError("analysis.enabled must be boolean")
+    number(analysis.setdefault("duplicate_threshold", 0.01), "analysis.duplicate_threshold", 0, 0.2)
     config.setdefault("anchor", "bottom-center")
     config.setdefault("target_anchor", "bottom-center")
     config.setdefault("scale", 1)

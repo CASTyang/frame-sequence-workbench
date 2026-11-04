@@ -10,7 +10,7 @@ from .pipeline import build
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Normalize PNG sequences and export animation assets offline.")
-    parser.add_argument("--version", action="version", version="frame-sequence-workbench 0.1.0")
+    parser.add_argument("--version", action="version", version="frame-sequence-workbench 0.2.0")
     commands = parser.add_subparsers(dest="command", required=True)
     command = commands.add_parser("build", help="build a JSON configuration into a new output directory")
     command.add_argument("config")

@@ -20,3 +20,4 @@ jobs:
       - run: frame-workbench build examples/directory.json --output examples/output-directory
       - run: frame-workbench build examples/zip.json --output examples/output-zip
       - run: frame-workbench build examples/sheet.json --output examples/output-sheet
+      - run: frame-workbench build examples/analysis.json --output examples/output-analysis
