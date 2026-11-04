@@ -14,6 +14,6 @@
 - [x] Integrate quality report and preview: show duplicate savings, downloadable proposed sequence/durations, loop preview range and reset. Never apply approximate deletions silently.
 - [x] Document public-site findings with evidence hashes/locations and known unknowns; update skill with concrete review/application workflow.
 - [x] Run full tests/lint; browser check candidate selection/reset/download/mobile; build/install package and independently review.
-- [ ] Push feature branch and draft PR to CASTyang/frame-sequence-workbench.
+- [x] Push feature branch and open [draft PR #1](https://github.com/CASTyang/frame-sequence-workbench/pull/1) to CASTyang/frame-sequence-workbench.
 
 Acceptance examples: `[A,A,B]` at `[80,120,100]` yields proposed source sequence `[A,B]` and durations `[200,100]`; transparent red/blue hidden RGB is equal; a repeated closed orbit should rank a complete moving cycle above a static endpoint hold; a straight translating object must not be called a seamless loop. Candidate scores are diagnostics, not semantic motion guarantees.
