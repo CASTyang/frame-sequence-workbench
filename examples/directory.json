@@ -1,0 +1,14 @@
+{
+  "action_id": "geometric-wave",
+  "loop": "infinite",
+  "crop": [12, 12, 116, 120],
+  "source": {"type": "directory", "path": "generated/frames"},
+  "canvas": [192, 160],
+  "trim": true,
+  "source_anchor": [64, 114],
+  "target_anchor": [0.5, 0.9],
+  "scale": 0.8,
+  "duration_ms": 120,
+  "sheet_columns": 4,
+  "exports": ["png", "sheet", "gif", "webp", "ora"]
+}

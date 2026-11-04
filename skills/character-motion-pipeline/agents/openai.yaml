@@ -1,0 +1,4 @@
+interface:
+  display_name: "Character Motion Pipeline"
+  short_description: "Prepare aligned character frames and review animation loops"
+  default_prompt: "Use $character-motion-pipeline to turn these character frames into a reproducible animation with stable anchors and a visual quality report."

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frame-sequence-workbench"
+version = "0.1.0"
+description = "Offline PNG sequence alignment, animation export, and visual QA"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "CASTyang"}]
+dependencies = ["Pillow>=10.4,<13"]
+keywords = ["spritesheet", "animation", "png", "openraster"]
+classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
+
+[project.scripts]
+frame-workbench = "frame_workbench.cli:main"
+
+[project.urls]
+Repository = "https://github.com/CASTyang/frame-sequence-workbench"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
